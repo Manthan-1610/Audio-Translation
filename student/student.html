@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Module</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            padding: 20px 0;
+        }
+        button {
+            display: block;
+            width: 200px;
+            height: 50px;
+            margin: 20px auto;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #output {
+            width: 80%;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-align: center;
+            min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Student Module</h1>
+    <select id="classSelect" onchange="populateLectures()">
+        <option value="">Select Class</option>
+        <!-- Options will be populated dynamically -->
+    </select>    
+    <input type="date" id="lectureDate" onchange="populateLectures()">
+    <select id="lectureSelect">
+        <option value="">Select Lecture</option>
+        <!-- Options will be populated dynamically -->
+    </select>
+    <button id="getEnglish">Get English Text</button>
+    <button id="getHindi">Get Hindi Text</button>
+    <button id="getGujarati">Get Gujarati Text</button>
+    <button id="downloadAudio">Download Audio</button>
+    <div id="output"></div>
+
+    <script>
+        async function populateLectures() {
+            lectureSelect.innerHTML = '<option value="">Select Lecture</option>';
+            const selectedClass = classSelect.value;
+            const selectedDate = lectureDate.value;
+            if (selectedClass && selectedDate) {
+                const selectedDay = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' });
+                const response = await fetch(`http://localhost:5000/get_lectures?class=${selectedClass}&day=${selectedDay}`);
+                const lectures = await response.json();
+                lectures.forEach(lecture => {
+                    const option = document.createElement('option');
+                    option.value = lecture;
+                    option.textContent = lecture;
+                    lectureSelect.appendChild(option);
+                });
+            }
+        }
+        async function fetchClasses() {
+            const response = await fetch('http://localhost:5000/get_classes');
+            const classes = await response.json();
+            classes.forEach(className => {
+                const option = document.createElement('option');
+                option.value = className;
+                option.textContent = className;
+                classSelect.appendChild(option);
+            });
+        }
+        fetchClasses();
+
+        async function fetchData(language) {
+    const selectedClass = document.getElementById('classSelect').value;
+    const selectedDate = document.getElementById('lectureDate').value;
+    const selectedLecture = document.getElementById('lectureSelect').value;
+
+    if (!selectedClass || !selectedDate || !selectedLecture) {
+        alert('Please select class, date, and lecture.');
+        return;
+    }
+
+    const response = await fetch(`https://guni-student-info-chat-bot.onrender.com/get_audio_data`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            class: selectedClass,
+            date: selectedDate,
+            lecture: selectedLecture,
+            language: language
+        })
+    });
+
+    if (!response.ok) {
+        const errorMessage = await response.text();
+        alert(`Error: ${errorMessage}`);
+        return;
+    }
+
+    const data = await response.json();
+
+    // Filter the data based on selected date, lecture, class, and language
+    const filteredData = data.audio_data.filter(item => 
+        item.Date_Time.includes(selectedDate) &&
+        item.Class === selectedClass &&
+        item.Subject === selectedLecture &&
+        item.Language.toLowerCase() === language.toLowerCase()
+    );
+
+    // Format the filtered data for display
+    let formattedData = '';
+filteredData.forEach(item => {
+    formattedData += `${item.Audio_To_Text}\n`;
+});
+
+    document.getElementById('output').textContent = formattedData;
+}
+        document.getElementById('getEnglish').addEventListener('click', () => fetchData('english'));
+        document.getElementById('getHindi').addEventListener('click', () => fetchData('hindi'));
+        document.getElementById('getGujarati').addEventListener('click', () => fetchData('gujarati'));
+
+        document.getElementById('downloadAudio').addEventListener('click', async () => {
+            const selectedClass = document.getElementById('classSelect').value;
+            const selectedDate = document.getElementById('lectureDate').value;
+            const selectedLecture = document.getElementById('lectureSelect').value;
+
+            if (!selectedClass || !selectedDate || !selectedLecture) {
+                alert('Please select class, date, and lecture.');
+                return;
+            }
+
+            window.open(`https://guni-student-info-chat-bot.onrender.com/get_audio_data?class=${selectedClass}&date=${selectedDate}&lecture=${selectedLecture}&download=true`);
+        });
+
+    </script>
+</body>
+</html>
